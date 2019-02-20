@@ -1,5 +1,5 @@
 
-select PLSQL_ADD(using parameters content=$$
+select PLSQL_CREATE(using parameters content=$$
 
 create or replace procedure p_hello(msg varchar)
 as
@@ -97,7 +97,7 @@ begin
 end
 */
 
-select PLSQL_EXEC('call p_hello(''world!'')');
+select PLSQL_EXEC($$p_hello('world')$$);
 
 select PLSQL_EXEC($$
 begin

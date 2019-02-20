@@ -16,10 +16,10 @@ import org.apache.hive.hplsql.HplsqlParser;
 
 import com.vertica.sdk.*;
 
-public class PLSQL_AddFactory extends ScalarFunctionFactory {
+public class PLSQL_CreateFactory extends ScalarFunctionFactory {
     public static String CONTENT = "content";
 
-    public class PLSQL_Add extends ScalarFunction {
+    public class PLSQL_Create extends ScalarFunction {
         private String result = null;
 
         @Override
@@ -107,6 +107,6 @@ public class PLSQL_AddFactory extends ScalarFunctionFactory {
 
     @Override
     public ScalarFunction createScalarFunction(ServerInterface srvInterface) {
-        return new PLSQL_Add();
+        return new PLSQL_Create();
     }
 }

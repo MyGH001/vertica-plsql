@@ -4,7 +4,7 @@ This project integrates  **HPLSQL**  as PL/SQL interpreter, stores PL/SQL code i
 
 Vertica PL/SQL can run in two deploy modes:
 
-- **Standalone mode**. It co-exits with ETL or other applications, which can invoke PL/SQL procedures from CLI or Java code. In this mode, PL/SQL have no direct relation with Vertica, it just issue query to Vertica through JDBC remotely. The mode is supported by **hplsql** component, which is forked from and compatible with [HPLSQL of apache/hive](https://github.com/apache/hive).
+- **Standalone mode**. It co-exits with ETL or other applications, which can invoke PL/SQL procedures from CLI or Java code. In this mode, PL/SQL have no direct relation with Vertica, it just issue query to Vertica through JDBC remotely. The mode is supported by **hplsql** component, which is forked from and compatible with [HPLSQL of apache/hive](https://github.com/apache/hive).
 - **In Vertica mode**. This mode is supported by **vplsql** component, which contains some Vertica UDFs to manage PL/SQL procedures/functions, and run them on Vertical database.
 
 ## PL/SQL Reference
@@ -126,7 +126,7 @@ mvn -DskipTests=true clean install
     $
     $ cd vertica-plsql-${VERSION}/
     $
-    $ export VSQL="/opt/vertica/bin/vsql -U dbadmin -w '${youPassword}'"
+    $ export VSQL="/opt/vertica/bin/vsql -U dbadmin -w '${yourPassword}'"
     $
     $ $VSQL -f ddl/uninstall.sql # optional step for upgrade
     $ $VSQL -f ddl/install.sql
@@ -143,7 +143,7 @@ mvn -DskipTests=true clean install
     (1 row)
 
     -- create procedures and functions
-    select PLSQL_ADD(using parameters content=$$
+    select PLSQL_CREATE(using parameters content=$$
       -- PL/SQL code ...
       create function f_add2ints(i1 int, i2 int)
       returns int
@@ -160,14 +160,14 @@ mvn -DskipTests=true clean install
       end;
       -- PL/SQL code ...
       $$);
-             PLSQL_ADD
+             PLSQL_CREATE
     -------------------------------
      Ln:3 CREATE FUNCTION f_add2ints
     Ln:10 CREATE PROCEDURE p_hello
     (1 row)
   
     -- execute procedure
-    select PLSQL_EXEC('p_hello(''world'')');
+    select PLSQL_EXEC($$p_hello('world')$$);
       PLSQL_EXEC
     ----------------
      Hello, world!

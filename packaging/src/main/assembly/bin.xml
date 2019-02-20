@@ -95,6 +95,17 @@
     </fileSet>
 
     <fileSet>
+      <directory>${project.parent.basedir}/vplsql/src/test/queries</directory>
+      <includes>
+        <include>**/*</include>
+      </includes>
+      <excludes>
+        <exclude>ivysettings.xml</exclude>
+      </excludes>
+      <outputDirectory>test/invertica</outputDirectory>
+    </fileSet>
+
+    <fileSet>
       <fileMode>755</fileMode>
       <directory>${project.parent.basedir}/lib</directory>
       <includes>

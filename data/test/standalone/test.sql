@@ -1,10 +1,7 @@
-
-select PLSQL_CREATE(using parameters content=$$
-
 create or replace procedure p_hello(msg varchar)
 as
 begin
-  print('Hello, ' || msg || '!');
+  print('Hello: ' || msg);
   print('1+2 = ' || f_add2ints(1, 2));
 end;
 
@@ -53,7 +50,7 @@ begin
   end loop;
 end;
 
-create function f_add2ints(i1 int, i2 int)
+create function f_add2ints(i1 int, i2 int) 
 returns int
 as
 begin
@@ -67,45 +64,9 @@ begin
   return 'just for testing drop';
 end;
 
-$$);
-
-
-select PLSQL_EXPORT(using parameters name='p_hello');
-
-select PLSQL_EXPORT(using parameters name='p_basic');
-
-select PLSQL_EXPORT(using parameters name='p_copy');
-
-select PLSQL_EXPORT(using parameters name='p_output');
-
-select PLSQL_EXPORT(using parameters name='f_add2ints');
-
-select PLSQL_EXPORT(using parameters name='f_fordrop');
-
-select PLSQL_DROP(using parameters name='f_fordrop');
-
-select PLSQL_EXPORT(using parameters name='f_fordrop');
-
-select PLSQL_EXPORT();
-
-/*
 begin
-  call p_hello('Vertica');
   call p_basic();
   call p_copy();
-  call p_output();
+  call p_export();
   print('1+2 = ' || f_add2ints(1, 2));
 end
-*/
-
-select PLSQL_EXEC($$p_hello('world')$$);
-
-select PLSQL_EXEC($$
-begin
-  call p_hello('Vertica');
-  call p_basic();
-  call p_copy();
-  call p_output();
-  print('1+2 = ' || f_add2ints(1, 2));
-end
-$$ using parameters trace=true, dryRun=true, withStderr=true);

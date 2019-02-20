@@ -1,1 +1,0 @@
-FAILED: ValidationFailureSemanticException default.srcpart: Partition spec {key=null} contains non-partition columns

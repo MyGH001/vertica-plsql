@@ -1,0 +1,42 @@
+<configuration>
+<property>
+  <name>hplsql.conn.default</name>
+  <value>verticaconn</value>
+  <description>The default connection profile</description>
+</property>
+<property>
+  <name>hplsql.conn.verticaconn</name>
+  <value>com.vertica.jdbc.Driver;jdbc:vertica://v001:5433/test;dbadmin;</value>
+  <description>Vertica connection</description>
+</property>
+<property>
+  <name>hplsql.conn.convert.verticaconn</name>
+  <value>true</value>
+  <description>same as hplsql-0.3.31 to avoid NullPointerException when CREATE TABLE statement has NON-LENGH type columns</description>
+</property>
+<property>
+  <name>hplsql.dual.table</name>
+  <value></value>
+  <description>Single row, single column table for internal operations</description>
+</property>
+<property>
+  <name>hplsql.insert.values</name>
+  <value>native</value>
+  <description>How to execute INSERT VALUES statement: native (default) and select</description>
+</property>
+<property>
+  <name>hplsql.onerror</name>
+  <value>exception</value>
+  <description>Error handling behavior: exception (default), seterror and stop</description>
+</property>
+<property>
+  <name>hplsql.temp.tables</name>
+  <value>native</value>
+  <description>Temporary tables: native (default) and managed</description>
+</property>
+<property>
+  <name>hplsql.temp.tables.schema</name>
+  <value></value>
+  <description>Schema for managed temporary tables</description>
+</property>
+</configuration>

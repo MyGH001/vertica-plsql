@@ -15,7 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bin=`dirname "$0"`
-bin=`cd "$bin"; pwd`
+bin=$(dirname "$0")
+bin=$(cd "${bin}"; pwd)
+root=$(dirname "${bin}")
 
-. "$bin"/hive --service hplsql "$@"
+cp="${root}/conf":$(echo ${root}/lib/*.jar | tr ' ' ':')
+
+java -cp "$cp" org.apache.hive.hplsql.Hplsql "$@"

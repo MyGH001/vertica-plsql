@@ -1,1 +1,0 @@
-CREATE external TABLE table1 (a INT DEFAULT 56, b STRING);

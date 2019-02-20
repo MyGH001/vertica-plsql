@@ -1,3 +1,0 @@
--- max allowed length for constraint name is 255
-create table t (i int, j string constraint aaaaabcdatyaaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaabcdatyaaaa
- default 'def_value');

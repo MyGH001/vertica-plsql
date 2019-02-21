@@ -23,7 +23,7 @@ public class PLSQL_ExecFactory extends ScalarFunctionFactory {
     public static String WITHSTDERR = "withStderr";
     public static String DRYRUN = "dryRun";
 
-    public class PLSQL_Exe extends ScalarFunction {
+    public class PLSQL_Exec extends ScalarFunction {
         private Boolean trace = false;
         private Boolean withStderr = false;
         private Boolean dryRun = false;
@@ -185,6 +185,6 @@ public class PLSQL_ExecFactory extends ScalarFunctionFactory {
 
     @Override
     public ScalarFunction createScalarFunction(ServerInterface srvInterface) {
-        return new PLSQL_Exe();
+        return new PLSQL_Exec();
     }
 }

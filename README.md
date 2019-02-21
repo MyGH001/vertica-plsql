@@ -4,21 +4,152 @@ This project integrates  **HPLSQL**  as PL/SQL interpreter, stores PL/SQL code i
 
 Vertica PL/SQL can run in two deploy modes:
 
-- **Standalone mode**. It co-exits with ETL or other applications, which can invoke PL/SQL procedures from CLI or Java code. In this mode, PL/SQL have no direct relation with Vertica, it just issue query to Vertica through JDBC remotely. The mode is supported by **hplsql** component, which is forked from and compatible with [HPLSQL of apache/hive](https://github.com/apache/hive).
+- **Standalone mode**. It co-exits with ETL or other applications, which can invoke PL/SQL procedures from CLI or Java code. In this mode, PL/SQL have no direct relation with Vertica, it just issue query to Vertica through JDBC remotely. The mode is supported by **hplsql** component, which is forked from and compatible with [HPLSQL of apache/hive](https://github.com/apache/hive/tree/master/hplsql).
+
+  This is the recommended mode, as it only need one connection to Vertica for running PL/SQL code.
+
 - **In Vertica mode**. This mode is supported by **vplsql** component, which contains some Vertica UDFs to manage PL/SQL procedures/functions, and run them on Vertical database.
 
 ## PL/SQL Reference
 
 Vertica PL/SQL keeps compatible with **HPLSQL** of apache/hive, which is compatible to a large extent with Oracle PL/SQL, ANSI/ISO SQL/PSM (IBM DB2, MySQL, Teradata i.e), Teradata BTEQ, PostgreSQL PL/pgSQL (Netezza/GPDB), Transact-SQL (Microsoft SQL Server and Sybase) that allows you leveraging existing code and save cost for migration to Veritca.
 
-Here is it's [Language Reference Guide](http://hplsql.org/doc#language_elements).
+**Notice:** pay attention with CURSOR and LOOP of PL/SQL, it will be performance killer if it refers to dataset with many rows.
+
+### Language Reference Guide is [here.](http://hplsql.org/doc#language_elements)
+
+### Vertica PL/SQL Management Functions
+
+1. **PLSQL_CREATE** (USING PARAMETERS **content** VARCHAR) RETURNS VARCHAR
+
+   Description: define procedures and functions wheth PL/SQL code.
+
+   Parameters:
+
+    - **content**: PL/SQL code, VARCHAR.
+
+   Return: info of procedures and functions created, VARCHAR.
+
+   Examples:
+
+    ``` SQL
+    select PLSQL_CREATE(using parameters content=$$
+      -- PL/SQL code ...
+      create function f_add2ints(i1 int, i2 int)
+      returns int
+      as
+      begin
+        return i1+i2;
+      end;
+
+      create or replace procedure p_hello(msg varchar)
+      as
+      begin
+        print('Hello, ' || msg || '!');
+        print('1+2 = ' || f_add2ints(1, 2));
+      end;
+      -- PL/SQL code ...
+      $$);
+             PLSQL_CREATE
+    -------------------------------
+     Ln:3 CREATE FUNCTION f_add2ints
+    Ln:10 CREATE PROCEDURE p_hello
+    (1 row)
+    ```
+
+2. **PLSQL_DROP** (USING PARAMETERS **name** VARCHAR) RETURNS BOOLEAN
+
+   Description: drop specified procedure or function.
+
+   Parameters:
+
+    - **name**: name for procedure/function, VARCHAR.
+
+   Return: whether the specified procedure/function is dropped or not, BOOLEAN.
+
+   Examples:
+
+    ``` SQL
+    select PLSQL_DROP(using parameters name='p_hello');
+     PLSQL_DROP
+    ------------
+     t
+    (1 row)
+    ```
+
+3. **PLSQL_EXEC** (**content** VARCHAR [USING PARAMETERS **trace** BOOLEAN, **withStderr** BOOLEAN, **dryRun** BOOLEAN]) RETURNS VARCHAR
+
+   Description: run specified procedure, function, or dynamic PL/SQL code.
+
+   Arguments:
+
+    - **content**: PL/SQL procedure/function name or code, VARCHAR.
+
+   Parameters:
+
+    - **trace**: return whether including detail runtime info, BOOLEAN, optional, default is **false**. True will be helpful for debugging.
+    - **withStderr**: return whether including info from stderr, BOOLEAN, optional, default is **false**. Giving true will be helpful for troubleshooting.
+    - **dryRun**: whether ignore database operations, BOOLEAN, optional, default is **false**. True with no influence your data.
+
+   Return: executing result, VARCHAR.
+
+   Examples:
+
+    ``` SQL
+    select PLSQL_EXEC($$p_hello('world')$$);
+      PLSQL_EXEC
+    ----------------
+     Hello, world!
+    1+2 = 3
+    (1 row)
+
+    select PLSQL_EXEC($$p_hello('world')$$ using parameters trace=true);
+                   PLSQL_EXEC
+    --------------------------------------------------
+    EXEC PROCEDURE p_hello
+    Ln:1 SET PARAM msg = world
+    Ln:4 PRINT
+    Hello, world!
+    Ln:5 PRINT
+    Ln:5 EXEC FUNCTION f_add2ints
+    Ln:5 SET PARAM i1 = 1
+    Ln:5 SET PARAM i2 = 2
+    Ln:57 RETURN
+    1+2 = 3
+    (1 row)
+    ```
+
+4. **PLSQL_EXPORT** ([USING PARAMETERS **name** VARCHAR]) RETURNS BOOLEAN
+
+   Description: export PL/SQL code of specified procedure or function.
+
+   Parameters:
+
+    - **name**: procedure/function, VARCHAR, procedure/function, default is null which means all stored PL/SQL objects.
+
+   Return: DDL for the specified procedures/functions, VARCHAR.
+
+   Examples:
+
+    ``` SQL
+    select PLSQL_EXPORT(using parameters name='f_add2ints');
+                     PLSQL_EXPORT
+    ----------------------------------------------
+     create function f_add2ints(i1 int, i2 int)
+      returns int
+      as
+      begin
+        return i1+i2;
+      end
+    (1 row)
+    ```
 
 ## Get Started
-
+  
 ### Installation
-
-You can install Vertica PL/SQL by [downloading](https://github.com/dingqiangliu/vertica-plsql/releases) the latest version of binary, or build it from the source code.
-
+  
+  You can install Vertica PL/SQL by [downloading](https://github.com/dingqiangliu/vertica-plsql/releases) the latest version of binary, or build it from the source code.
+  
 #### Requirements
 
 - Java 1.7 or 1.8
@@ -137,7 +268,7 @@ mvn -DskipTests=true clean install
     ``` SQL
     -- drop procedure
     select PLSQL_DROP(using parameters name='p_hello');
-     PLSQL_DROP 
+     PLSQL_DROP
     ------------
      t
     (1 row)

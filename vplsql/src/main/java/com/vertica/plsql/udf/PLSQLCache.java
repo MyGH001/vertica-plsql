@@ -22,7 +22,7 @@ import com.vertica.sdk.*;
  * Cache for PLSQL, including serialization to disk to improve performance.
  */
 public class PLSQLCache {
-    private static String CACHPATH = "/tmp/vplsql.cache";
+    private static final String CACHPATH = "/tmp/vplsql.cache";
 
     private static Object data = null;
 

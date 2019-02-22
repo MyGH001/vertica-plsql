@@ -98,6 +98,8 @@ public class HPLSQLExecutor implements PLSQLExecutor {
             };
             String[] args = { "-e", codePLSQL, "--trace", "--offline" };
             exec.run(args);
+            DFSOperations.updateLastModified(srvInterface);
+
             return getHPLSQLOutput(out.toString()).trim();
         } catch (Throwable e) {
             throw new UdfException(0, String.format("ERROR: failed add PL/SQL caused by %s", e.getMessage()));

@@ -11,7 +11,7 @@ import com.vertica.sdk.*;
  * export PL/SQL code of specified procedure or function.
  */
 public class PLSQL_ExportFactory extends ScalarFunctionFactory {
-    public static String NAME = "name";
+    public static final String NAME = "name";
 
     public class PLSQL_Export extends ScalarFunction
     {

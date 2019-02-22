@@ -10,7 +10,7 @@ import com.vertica.sdk.*;
  * parse PL/SQL code to define procedures, functions and packages.
  */
 public class PLSQL_CreateFactory extends ScalarFunctionFactory {
-    public static String CONTENT = "content";
+    public static final String CONTENT = "content";
 
     public class PLSQL_Create extends ScalarFunction {
         private String result = null;

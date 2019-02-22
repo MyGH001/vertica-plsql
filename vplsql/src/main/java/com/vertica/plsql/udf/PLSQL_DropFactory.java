@@ -10,7 +10,7 @@ import com.vertica.sdk.*;
  * drop specified procedure or function.
  */
 public class PLSQL_DropFactory extends ScalarFunctionFactory {
-    public static String NAME = "name";
+    public static final String NAME = "name";
 
     public class PLSQL_Drop extends ScalarFunction {
         private boolean isDeleted = false;

@@ -13,10 +13,10 @@ import com.vertica.sdk.*;
  * otherwise it will break the feature of parsed PL/SQL code serializaton.
  */
 public interface PLSQLExecutor {
-    public static String TRACE = "trace";
-    public static String WITHSTDERR = "withStderr";
-    public static String DRYRUN = "dryRun";
-    public static String WITHCACHE = "withCache";
+    public static final String TRACE = "trace";
+    public static final String WITHSTDERR = "withStderr";
+    public static final String DRYRUN = "dryRun";
+    public static final String WITHCACHE = "withCache";
 
     public static void setParameterType(ServerInterface srvInterface, SizedColumnTypes parameterTypes) {
         parameterTypes.addBool(PLSQLExecutor.TRACE);

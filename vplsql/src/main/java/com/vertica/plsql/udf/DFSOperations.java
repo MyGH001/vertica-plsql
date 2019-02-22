@@ -16,8 +16,8 @@ import com.vertica.sdk.*;
  * DFS operations for managing PL/SQL code.
  */
 public class DFSOperations {
-    public static String DFS_PLSQL_PATH = "/plsqlObjects";
-    public static String DFS_PLSQL_LASTMODIFIED_PATH = "/plsqlObjects.lastmodified";
+    public static final String DFS_PLSQL_PATH = "/plsqlObjects";
+    public static final String DFS_PLSQL_LASTMODIFIED_PATH = "/plsqlObjects.lastmodified";
 
     /**
      * Write PL/SQL code to DFS
@@ -40,7 +40,16 @@ public class DFSOperations {
             objWriter.write(buffer);
             objWriter.close();
 
-            updateLastModified(srvInterface);
+            /*
+             * Notice: can not update same DFS file multiple times in same UDF call, "ERROR
+             * 5834: DFSFile: Can not create/ open for write [/plsqlObjects.lastmodified] as
+             * another thread in the current statement has requested to create/write the
+             * same file".
+             * 
+             * So, walkaround is call updateLastModified only after a batch of
+             * CREATE/writeFile operators.
+             */
+            // updateLastModified(srvInterface);
         } catch (Throwable e) {
             throw new RuntimeException(String.format("ERROR: failed add PL/SQL caused by %s", e.getMessage()));
         }

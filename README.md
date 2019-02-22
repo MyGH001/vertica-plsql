@@ -27,6 +27,7 @@ Vertica PL/SQL keeps compatible with **HPLSQL** of apache/hive, which is compati
    Parameters:
 
     - **content**: PL/SQL code, VARCHAR.
+    - **withStderr**: return whether including info from stderr, BOOLEAN, optional, default is **false**. Giving true will be helpful for troubleshooting.
 
    Return: info of procedures and functions created, VARCHAR.
 
@@ -77,7 +78,7 @@ Vertica PL/SQL keeps compatible with **HPLSQL** of apache/hive, which is compati
     (1 row)
     ```
 
-3. **PLSQL_EXEC** (**content** VARCHAR [USING PARAMETERS **trace** BOOLEAN, **withStderr** BOOLEAN, **dryRun** BOOLEAN]) RETURNS VARCHAR
+3. **PLSQL_EXEC** (**content** VARCHAR [USING PARAMETERS **trace** BOOLEAN, **withStderr** BOOLEAN, **dryRun** BOOLEAN, **withCache** BOOLEAN]) RETURNS VARCHAR
 
    Description: run specified procedure, function, or dynamic PL/SQL code.
 
@@ -90,6 +91,7 @@ Vertica PL/SQL keeps compatible with **HPLSQL** of apache/hive, which is compati
     - **trace**: return whether including detail runtime info, BOOLEAN, optional, default is **false**. True will be helpful for debugging.
     - **withStderr**: return whether including info from stderr, BOOLEAN, optional, default is **false**. Giving true will be helpful for troubleshooting.
     - **dryRun**: whether ignore database operations, BOOLEAN, optional, default is **false**. True with no influence your data.
+    - **withCache**: whether cache parsed PL/SQL tree for better performance, BOOLEAN, optional, default is **true**.
 
    Return: executing result, VARCHAR.
 

@@ -1,7 +1,5 @@
 /* Copyright (c) DingQiang Liu(dingqiangliu@gmail.com), 2012 - 2019
  *
- * Description: drop PL/SQL procedures, functions or packages.
- *
  */
 
 
@@ -9,9 +7,11 @@ package com.vertica.plsql.udf;
 
 import com.vertica.sdk.*;
 
+/**
+ * export PL/SQL code of specified procedure or function.
+ */
 public class PLSQL_ExportFactory extends ScalarFunctionFactory {
     public static String NAME = "name";
-    public static String DFS_PLSQL_PATH = "/plsqlObjects";
 
     public class PLSQL_Export extends ScalarFunction
     {

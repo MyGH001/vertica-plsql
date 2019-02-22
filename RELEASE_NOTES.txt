@@ -1,3 +1,11 @@
+2019-02-22 Release Notes - Version 0.0.2
+
+** Sub-task
+    * cache parsed PL/SQL tree for better performance
+    * rename UDF PLSQL_ADD to PLSQL_CREATE
+    * add test scripts for Standalone and In Vertica mode
+
+
 2019-02-20 Release Notes - Version 0.0.1
 
 ** Sub-task

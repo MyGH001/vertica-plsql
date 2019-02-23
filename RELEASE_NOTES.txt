@@ -4,6 +4,7 @@
     * cache parsed PL/SQL tree for better performance
     * rename UDF PLSQL_ADD to PLSQL_CREATE
     * add test scripts for Standalone and In Vertica mode
+    * synchronized from upstream, HIVE-21308: Negative forms of variables are not supported in HPL/SQL
 
 
 2019-02-20 Release Notes - Version 0.0.1

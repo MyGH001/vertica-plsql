@@ -36,7 +36,7 @@ public class PLSQLCache {
      */
     public static synchronized void init(ServerInterface srvInterface) {
         boolean serialization = true;
-        if (srvInterface.getParamReader().containsParameter(PLSQLExecutor.WITHCACHE))
+        if (srvInterface != null && srvInterface.getParamReader().containsParameter(PLSQLExecutor.WITHCACHE))
             serialization = srvInterface.getParamReader().getBoolean(PLSQLExecutor.WITHCACHE);
 
         if (!PLSQLCache.initialized) {
@@ -48,10 +48,8 @@ public class PLSQLCache {
                     "org.antlr.v4.runtime.TokenFactory", "org.antlr.v4.runtime.TokenSource" };
             try {
                 ClassPool cp = ClassPool.getDefault();
-                if ("com.vertica.udxfence.VerticaClassLoader".equals(cp.getClassLoader().getClass().getName())) {
-                    // dependency libraries are not in system classpath
-                    cp.appendClassPath(new ClassClassPath(cp.getClass()));
-                }
+                // dependency libraries may be not in system classpath
+                cp.appendClassPath(new ClassClassPath(cp.getClass()));
                 CtClass intSerial = cp.getCtClass(Serializable.class.getName());
                 for (String className : arrClassName) {
                     CtClass cls = cp.getCtClass(className);
@@ -67,7 +65,7 @@ public class PLSQLCache {
                 ObjectInputStream in = null;
                 try {
                     File fcache = new File(PLSQLCache.CACHPATH);
-                    if (fcache.exists() && fcache.lastModified() >= DFSOperations.getLastModified(srvInterface)) {
+                    if (srvInterface == null || fcache.exists() && fcache.lastModified() >= DFSOperations.getLastModified(srvInterface)) {
                         in = new ObjectInputStream(new FileInputStream(PLSQLCache.CACHPATH));
                         PLSQLCache.data = in.readObject();
                     }

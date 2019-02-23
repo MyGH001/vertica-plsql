@@ -46,23 +46,7 @@
       </excludes>
 
       <includes>
-        <include>.checkstyle</include>
-        <include>.gitattributes</include>
-        <include>.gitignore</include>
-        <include>README*</include>
-        <include>LICENSE</include>
-        <include>NOTICE</include>
-        <include>CHANGELOG</include>
-        <include>RELEASE_NOTES.txt</include>
-        <include>ant/**/*</include>
-        <include>bin/**/*</include>
-        <include>checkstyle/**/*</include>
-        <include>conf/**/*</include>
-        <include>data/**/*</include>
-        <include>lib/**/*</include>
-        <include>hplsql/**/*</include>
-        <include>packaging/**/*</include>
-        <include>pom.xml</include>
+        <include>**/*</include>
       </includes>
       <outputDirectory></outputDirectory>
     </fileSet>

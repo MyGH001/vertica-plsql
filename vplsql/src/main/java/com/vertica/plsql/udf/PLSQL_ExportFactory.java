@@ -2,8 +2,11 @@
  *
  */
 
-
 package com.vertica.plsql.udf;
+
+import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import com.vertica.sdk.*;
 
@@ -13,34 +16,43 @@ import com.vertica.sdk.*;
 public class PLSQL_ExportFactory extends ScalarFunctionFactory {
     public static final String NAME = "name";
 
-    public class PLSQL_Export extends ScalarFunction
-    {
-        private String content = null;
-        
+    public class PLSQL_Export extends ScalarFunction {
+        private Map<String, String> filesContent = null;
+
         @Override
-        public void setup(ServerInterface srvInterface, SizedColumnTypes argTypes ) {
+        public void setup(ServerInterface srvInterface, SizedColumnTypes argTypes) {
             super.setup(srvInterface, argTypes);
 
             String objName = "";
             if (srvInterface.getParamReader().containsParameter(NAME))
                 objName = srvInterface.getParamReader().getString(NAME);
 
-            //read content from DSF.
+            // read content from DSF.
             try {
-                this.content = DFSOperations.readFiles(srvInterface, objName);
+                this.filesContent = DFSOperations.readFiles(srvInterface, objName);
             } catch (Throwable e) {
-                throw new UdfException(0, String.format("ERROR: failed export object[%s] caused by %s", objName, e.getMessage()));
+                throw new UdfException(0,
+                        String.format("ERROR: failed export object[%s] caused by %s", objName, e.getMessage()));
             }
         }
 
         @Override
-        public void processBlock(ServerInterface srvInterface, BlockReader argReader, 
-                                 BlockWriter resWriter) throws UdfException, DestroyInvocation {
+        public void processBlock(ServerInterface srvInterface, BlockReader argReader, BlockWriter resWriter)
+                throws UdfException, DestroyInvocation {
             do {
-                if(this.content != null)
-                    resWriter.setString(this.content);
-                else
+                if (this.filesContent != null) {
+                    StringBuffer result = new StringBuffer();
+                    SortedSet<String> keys = new TreeSet<String>(this.filesContent.keySet());
+                    for (String key : keys) {
+                        if (result.length() > 0) {
+                            result.append("\r\n\r\n");
+                        }
+                        result.append(this.filesContent.get(key));
+                    }
+                    resWriter.setString(result.toString());
+                } else {
                     resWriter.setStringNull();
+                }
 
                 resWriter.next();
             } while (argReader.next());
@@ -48,10 +60,10 @@ public class PLSQL_ExportFactory extends ScalarFunctionFactory {
     }
 
     @Override
-	public void getParameterType(ServerInterface srvInterface, SizedColumnTypes parameterTypes) {
+    public void getParameterType(ServerInterface srvInterface, SizedColumnTypes parameterTypes) {
         parameterTypes.addVarchar(256, NAME);
     }
-    
+
     @Override
     public void getPrototype(ServerInterface srvInterface, ColumnTypes argTypes, ColumnTypes returnType) {
         returnType.addVarchar();
@@ -63,7 +75,7 @@ public class PLSQL_ExportFactory extends ScalarFunctionFactory {
     }
 
     @Override
-	public ScalarFunction createScalarFunction(ServerInterface srvInterface) {
+    public ScalarFunction createScalarFunction(ServerInterface srvInterface) {
         return new PLSQL_Export();
     }
 }

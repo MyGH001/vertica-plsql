@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.concurrent.ConcurrentMap;
 
 import javassist.ClassClassPath;
 import javassist.ClassPool;
@@ -65,9 +66,23 @@ public class PLSQLCache {
                 ObjectInputStream in = null;
                 try {
                     File fcache = new File(PLSQLCache.CACHPATH);
-                    if (srvInterface == null || fcache.exists() && fcache.lastModified() >= DFSOperations.getLastModified(srvInterface)) {
+                    if (srvInterface == null || fcache.exists()
+                            && fcache.lastModified() >= DFSOperations.getLastModified(srvInterface)) {
+                        // TODO: deserialize with mulitple thread for better performance
                         in = new ObjectInputStream(new FileInputStream(PLSQLCache.CACHPATH));
-                        PLSQLCache.data = in.readObject();
+                        Object obj = in.readObject();
+                        if (obj != null && obj instanceof ConcurrentMap) {
+                            // compatible type checking
+                            ConcurrentMap map = (ConcurrentMap) obj;
+                            if (map.size() > 0) {
+                                Object key = map.keySet().iterator().next();
+                                Object value = map.get(key);
+                                if (key instanceof String && "org.apache.hive.hplsql.HplsqlParser$ProgramContext"
+                                        .equals(value.getClass().getName())) {
+                                    PLSQLCache.data = obj;
+                                }
+                            }
+                        }
                     }
                 } catch (Throwable e) {
                     // keep silent, maybe serialized cache is not compatible
@@ -89,6 +104,7 @@ public class PLSQLCache {
         if (serialization && PLSQLCache.data != value) {
             ObjectOutputStream out = null;
             try {
+                // TODO: serialize with mulitple thread for better performance
                 out = new ObjectOutputStream(new FileOutputStream(PLSQLCache.CACHPATH));
                 out.writeObject(value);
             } finally {

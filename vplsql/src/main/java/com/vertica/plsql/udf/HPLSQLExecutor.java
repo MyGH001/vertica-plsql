@@ -11,9 +11,12 @@ import java.io.PrintStream;
 import java.io.StringReader;
 import java.sql.SQLInvalidAuthorizationSpecException;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.apache.hive.hplsql.HplsqlLexer;
 import org.apache.hive.hplsql.HplsqlParser;
@@ -55,12 +58,20 @@ public class HPLSQLExecutor implements PLSQLExecutor {
         // read content from DSF.
         try {
             if (!PLSQLCache.isValidate()) {
-                String storedPLSQL = DFSOperations.readFiles(srvInterface, null);
-                if (storedPLSQL != null && storedPLSQL.length() > 0) {
-                    ParseTree treeStoredPLSQL = new HplsqlParser(new CommonTokenStream(new HplsqlLexer(
-                            new ANTLRInputStream(new ByteArrayInputStream(storedPLSQL.getBytes("UTF-8")))))).program();
-                    PLSQLCache.setData(treeStoredPLSQL, this.withCache);
+                Map<String, ParseTree> storedPLSQLTrees = null;
+                Map<String, String> filesContent = DFSOperations.readFiles(srvInterface, null);
+                if (filesContent != null) {
+                    for (Map.Entry<String, String> cnt : filesContent.entrySet()) {
+                        ParseTree tree = new HplsqlParser(new CommonTokenStream(new HplsqlLexer(
+                                new ANTLRInputStream(new ByteArrayInputStream(cnt.getValue().getBytes("UTF-8"))))))
+                                        .program();
+                        if (storedPLSQLTrees == null)
+                            storedPLSQLTrees = new ConcurrentHashMap<String, ParseTree>();
+                        storedPLSQLTrees.put(cnt.getKey(), tree);
+                    }
                 }
+
+                PLSQLCache.setData(storedPLSQLTrees, this.withCache);
             }
         } catch (Throwable e) {
             throw new UdfException(0, String.format("ERROR: failed read stored objects caused by %s", e.getMessage()));
@@ -134,6 +145,8 @@ public class HPLSQLExecutor implements PLSQLExecutor {
                 args.add("--offline");
 
             Exec4Vertica exec = new Exec4Vertica() {
+                private boolean inIncluding = false;
+
                 @Override
                 public void initOptions() {
                     super.initOptions();
@@ -143,16 +156,23 @@ public class HPLSQLExecutor implements PLSQLExecutor {
 
                 @Override
                 public void includeRcFile() {
+                    this.inIncluding = true;
+
                     super.includeRcFile();
                     // include stored PLSQLs
                     try {
-                        ParseTree treeStoredPLSQL = (ParseTree) PLSQLCache.getData();
-                        if (treeStoredPLSQL != null) {
-                            super.visit(treeStoredPLSQL);
+                        Map<String, ParseTree> storedPLSQLTrees = (Map<String, ParseTree>) PLSQLCache.getData();
+                        if (storedPLSQLTrees != null) {
+                            // TODO: parsing with mulitple thread for better performance
+                            for (Map.Entry<String, ParseTree> tree : storedPLSQLTrees.entrySet()) {
+                                super.visit(tree.getValue());
+                            }
                         }
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
+
+                    this.inIncluding = false;
                 }
 
                 public void setSqlCode(Exception e) {
@@ -169,6 +189,12 @@ public class HPLSQLExecutor implements PLSQLExecutor {
                     }
 
                     super.setSqlCode(e);
+                }
+
+                public void trace(ParserRuleContext ctx, String message) {
+                    // turn off trace info when including
+                    if (!this.inIncluding)
+                        super.trace(ctx, message);
                 }
             };
 

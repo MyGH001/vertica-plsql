@@ -7,6 +7,8 @@ package com.vertica.plsql.udf;
 
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.nio.CharBuffer;
 import java.nio.ByteBuffer;
 
@@ -60,7 +62,7 @@ public class DFSOperations {
      * 
      * @param objName name pattern to read, null or empty string means all objects.
      */
-    public static String readFiles(ServerInterface srvInterface, String objName) {
+    public static Map<String, String> readFiles(ServerInterface srvInterface, String objName) {
         try {
             if (objName == null)
                 objName = "";
@@ -68,32 +70,33 @@ public class DFSOperations {
                 objName = objName.toUpperCase();
 
             if (objName.length() == 0) {
-                StringBuffer content = null;
+                Map<String, String> filesContent = null;
 
                 DFSFile dir = new DFSFile(srvInterface, DFS_PLSQL_PATH);
                 if (dir.exists()) {
                     for (DFSFile objFile : dir.listFiles()) {
                         String strFile = readFile(srvInterface, objFile);
                         if (strFile != null) {
-                            if (content == null)
-                                content = new StringBuffer();
-                            else if (content.length() > 0)
-                                content.append("\r\n\r\n");
-
-                            content.append(strFile);
+                            if (filesContent == null)
+                                filesContent = new ConcurrentHashMap<String, String>();
+                            filesContent.put(objFile.getName().substring(DFS_PLSQL_PATH.length() + 1), strFile);
                         }
                     }
                 } else {
                     srvInterface.log("WARNING: no object exist!");
                 }
 
-                if (content == null)
-                    return null;
-                else
-                    return content.toString();
+                return filesContent;
             } else {
                 DFSFile objFile = new DFSFile(srvInterface, DFS_PLSQL_PATH + "/" + objName);
-                return readFile(srvInterface, objFile);
+                String content = readFile(srvInterface, objFile);
+                if (content != null) {
+                    Map<String, String> filesContent = new ConcurrentHashMap<String, String>(1);
+                    filesContent.put(objName, content);
+                    return filesContent;
+                } else {
+                    return null;
+                }
             }
         } catch (Throwable e) {
             throw new RuntimeException(String.format("ERROR: failed add PL/SQL caused by %s", e.getMessage()));

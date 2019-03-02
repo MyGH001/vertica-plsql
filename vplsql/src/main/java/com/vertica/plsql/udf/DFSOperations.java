@@ -5,11 +5,15 @@
 
 package com.vertica.plsql.udf;
 
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.nio.CharBuffer;
+import java.util.zip.GZIPOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
 
 import com.vertica.sdk.*;
@@ -19,12 +23,12 @@ import com.vertica.sdk.*;
  */
 public class DFSOperations {
     public static final String DFS_PLSQL_PATH = "/plsqlObjects";
-    public static final String DFS_PLSQL_LASTMODIFIED_PATH = "/plsqlObjects.lastmodified";
 
     /**
      * Write PL/SQL code to DFS
      */
-    public static void writeFile(ServerInterface srvInterface, String objName, String codePLSQL) {
+    public static synchronized void writeFile(ServerInterface srvInterface, String objName, String codePLSQL,
+            Object tree) {
         try {
             // write data to DSF file
             if (objName == null)
@@ -38,22 +42,28 @@ public class DFSOperations {
             objFile.create(DFSFile.DFSScope.NS_GLOBAL, DFSFile.DFSDistribution.HINT_REPLICATE);
             DFSFileWriter objWriter = new DFSFileWriter(objFile);
             objWriter.open();
-            ByteBuffer buffer = Charset.forName("UTF-8").newEncoder().encode(CharBuffer.wrap(codePLSQL));
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            DataOutputStream dos = new DataOutputStream(baos);
+            dos.writeUTF(codePLSQL);
+
+            ByteArrayOutputStream baosObject = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(new GZIPOutputStream(baosObject));
+            oos.writeObject(tree);
+            oos.close();
+            byte[] baObject = baosObject.toByteArray();
+            dos.writeInt(baObject.length);
+            dos.write(baObject);
+
+            dos.close();
+            ByteBuffer buffer = ByteBuffer.wrap(baos.toByteArray());
             objWriter.write(buffer);
             objWriter.close();
 
-            /*
-             * Notice: can not update same DFS file multiple times in same UDF call, "ERROR
-             * 5834: DFSFile: Can not create/ open for write [/plsqlObjects.lastmodified] as
-             * another thread in the current statement has requested to create/write the
-             * same file".
-             * 
-             * So, walkaround is call updateLastModified only after a batch of
-             * CREATE/writeFile operators.
-             */
-            // updateLastModified(srvInterface);
+            PLSQLCache.put(objName, codePLSQL, tree);
         } catch (Throwable e) {
-            throw new RuntimeException(String.format("ERROR: failed add PL/SQL caused by %s", e.getMessage()));
+            throw new RuntimeException(
+                    String.format("ERROR: failed writing PL/SQL to database, caused by %s", e.getMessage()));
         }
     }
 
@@ -61,25 +71,28 @@ public class DFSOperations {
      * Read PL/SQL code from DFS according name pattern.
      * 
      * @param objName name pattern to read, null or empty string means all objects.
+     * @return Map of {name: Object[codePLSQL, GZIPInputStream(ObjectInputStream)]}
      */
-    public static Map<String, String> readFiles(ServerInterface srvInterface, String objName) {
+    public static synchronized Map<String, Object[]> readFiles(ServerInterface srvInterface, String objName) {
         try {
+            Serialization.init(srvInterface);
+
             if (objName == null)
                 objName = "";
             else
                 objName = objName.toUpperCase();
 
             if (objName.length() == 0) {
-                Map<String, String> filesContent = null;
+                Map<String, Object[]> filesContent = null;
 
                 DFSFile dir = new DFSFile(srvInterface, DFS_PLSQL_PATH);
                 if (dir.exists()) {
                     for (DFSFile objFile : dir.listFiles()) {
-                        String strFile = readFile(srvInterface, objFile);
-                        if (strFile != null) {
+                        Object[] content = readFile(srvInterface, objFile);
+                        if (content != null) {
                             if (filesContent == null)
-                                filesContent = new ConcurrentHashMap<String, String>();
-                            filesContent.put(objFile.getName().substring(DFS_PLSQL_PATH.length() + 1), strFile);
+                                filesContent = new ConcurrentHashMap<String, Object[]>();
+                            filesContent.put(objFile.getName().substring(DFS_PLSQL_PATH.length() + 1), content);
                         }
                     }
                 } else {
@@ -89,9 +102,9 @@ public class DFSOperations {
                 return filesContent;
             } else {
                 DFSFile objFile = new DFSFile(srvInterface, DFS_PLSQL_PATH + "/" + objName);
-                String content = readFile(srvInterface, objFile);
+                Object[] content = readFile(srvInterface, objFile);
                 if (content != null) {
-                    Map<String, String> filesContent = new ConcurrentHashMap<String, String>(1);
+                    Map<String, Object[]> filesContent = new ConcurrentHashMap<String, Object[]>(1);
                     filesContent.put(objName, content);
                     return filesContent;
                 } else {
@@ -99,26 +112,49 @@ public class DFSOperations {
                 }
             }
         } catch (Throwable e) {
-            throw new RuntimeException(String.format("ERROR: failed add PL/SQL caused by %s", e.getMessage()));
+            throw new RuntimeException(
+                    String.format("ERROR: failed reading PL/SQL from database, caused by %s", e.getMessage()));
         }
     }
 
     /**
      * Read PL/SQL code from one DFS
+     * 
+     * @return Object[codePLSQL, GZIPInputStream(ObjectInputStream)]
      */
-    private static String readFile(ServerInterface srvInterface, DFSFile objFile)
-            throws DestroyInvocation, CharacterCodingException {
-        String content = null;
+    private static Object[] readFile(ServerInterface srvInterface, DFSFile objFile)
+            throws DestroyInvocation, IOException, ClassNotFoundException {
+        Object[] content = null;
 
         if (objFile.exists()) {
             DFSFileReader objReader = new DFSFileReader(objFile);
-            objReader.open();
-            int size = (int) objReader.size();
-            ByteBuffer buffer = ByteBuffer.allocate(size);
-            objReader.read(buffer, size);
-            buffer.position(0);
-            content = Charset.forName("UTF-8").newDecoder().decode(buffer).toString();
-            objReader.close();
+            try {
+                objReader.open();
+                int size = (int) objReader.size();
+                if (size > 0) {
+                    ByteBuffer buffer = ByteBuffer.allocate(size);
+                    objReader.read(buffer, size);
+                    buffer.position(0);
+
+                    ByteArrayInputStream baios = new ByteArrayInputStream(buffer.array());
+                    DataInputStream din = new DataInputStream(baios);
+
+                    content = new Object[2];
+                    content[0] = din.readUTF();
+                    int len = din.readInt();
+                    if (len > 0) {
+                        byte[] baObject = new byte[len];
+                        din.read(baObject);
+                        content[1] = baObject;
+                    } else {
+                        content[1] = null;
+                    }
+
+                    din.close();
+                }
+            } finally {
+                objReader.close();
+            }
         } else {
             srvInterface.log("WARNING: object [%s] does not exist!", objFile.getName());
         }
@@ -141,66 +177,16 @@ public class DFSOperations {
             DFSFile objFile = new DFSFile(srvInterface, DFS_PLSQL_PATH + "/" + objName);
             if (objFile.exists()) {
                 objFile.deleteIt(true);
+                PLSQLCache.remove(objName);
                 isDeleted = true;
-
-                updateLastModified(srvInterface);
             } else {
                 srvInterface.log("WARNING: object [%s] does not exist!", objName);
             }
 
             return isDeleted;
         } catch (Throwable e) {
-            throw new RuntimeException(String.format("ERROR: failed add PL/SQL caused by %s", e.getMessage()));
-        }
-    }
-
-    /**
-     * Update lastModified of saved PL/SQL code.
-     * 
-     * <b>Notice:</b> it should be called when DFS updated.
-     */
-    public static void updateLastModified(ServerInterface srvInterface) {
-        try {
-            // update lastModified
-            long lastModified = System.currentTimeMillis();
-            DFSFile tsFile = new DFSFile(srvInterface, DFS_PLSQL_LASTMODIFIED_PATH);
-            if (tsFile.exists())
-                tsFile.deleteIt(true);
-            tsFile.create(DFSFile.DFSScope.NS_GLOBAL, DFSFile.DFSDistribution.HINT_REPLICATE);
-            DFSFileWriter tsWriter = new DFSFileWriter(tsFile);
-            tsWriter.open();
-            ByteBuffer tsBuffer = ByteBuffer.allocate(Long.BYTES);
-            tsBuffer.putLong(lastModified);
-            tsBuffer.position(0);
-            tsWriter.write(tsBuffer);
-            tsWriter.close();
-
-            PLSQLCache.clear();
-        } catch (Throwable e) {
-            throw new RuntimeException(String.format("ERROR: failed add PL/SQL caused by %s", e.getMessage()));
-        }
-    }
-
-    /**
-     * Get lastModified of saved PL/SQL.
-     * 
-     * @return the difference, measured in milliseconds, between the current time
-     *         and midnight, January 1, 1970 UTC.
-     */
-    public static long getLastModified(ServerInterface srvInterface)
-            throws DestroyInvocation, CharacterCodingException {
-        DFSFile tsFile = new DFSFile(srvInterface, DFS_PLSQL_LASTMODIFIED_PATH);
-        if (tsFile.exists()) {
-            DFSFileReader tsReader = new DFSFileReader(tsFile);
-            tsReader.open();
-            int size = (int) tsReader.size();
-            ByteBuffer buffer = ByteBuffer.allocate(size);
-            tsReader.read(buffer, size);
-            buffer.position(0);
-            tsReader.close();
-            return buffer.getLong();
-        } else {
-            return -1;
+            throw new RuntimeException(
+                    String.format("ERROR: failed removing PL/SQL from database, caused by %s", e.getMessage()));
         }
     }
 }

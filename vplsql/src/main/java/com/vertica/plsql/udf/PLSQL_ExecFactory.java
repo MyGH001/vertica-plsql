@@ -19,6 +19,7 @@ public class PLSQL_ExecFactory extends ScalarFunctionFactory {
             super.setup(srvInterface, argTypes);
 
             this.executor = PLSQLExecutor.newInstance(srvInterface);
+            this.executor.initCache(srvInterface);
         }
 
         @Override

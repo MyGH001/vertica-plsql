@@ -16,17 +16,15 @@ public interface PLSQLExecutor {
     public static final String TRACE = "trace";
     public static final String WITHSTDERR = "withStderr";
     public static final String DRYRUN = "dryRun";
-    public static final String WITHCACHE = "withCache";
 
     public static void setParameterType(ServerInterface srvInterface, SizedColumnTypes parameterTypes) {
         parameterTypes.addBool(PLSQLExecutor.TRACE);
         parameterTypes.addBool(PLSQLExecutor.WITHSTDERR);
         parameterTypes.addBool(PLSQLExecutor.DRYRUN);
-        parameterTypes.addBool(PLSQLExecutor.WITHCACHE);
     }
 
     public static PLSQLExecutor newInstance(ServerInterface srvInterface) {
-        PLSQLCache.init(srvInterface);
+        Serialization.init(srvInterface);
 
         try {
             PLSQLExecutor exe = (PLSQLExecutor) Class.forName("com.vertica.plsql.udf.HPLSQLExecutor").newInstance();
@@ -35,10 +33,11 @@ public interface PLSQLExecutor {
         } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
-
     }
 
     public void init(ServerInterface srvInterface);
+
+    public void initCache(ServerInterface srvInterface);
 
     public String create(ServerInterface srvInterface, String codePLSQL);
 

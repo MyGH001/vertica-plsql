@@ -7,12 +7,17 @@ package com.vertica.plsql.udf;
 import java.io.ByteArrayInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
 import java.io.PrintStream;
 import java.io.StringReader;
 import java.sql.SQLInvalidAuthorizationSpecException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.zip.GZIPInputStream;
 
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -34,10 +39,11 @@ import com.vertica.sdk.*;
  * break the feature of parsed PL/SQL code serializaton.
  */
 public class HPLSQLExecutor implements PLSQLExecutor {
+    private static final int CONCURRENCY = (Runtime.getRuntime().availableProcessors() + 1) / 2;
+
     private boolean trace = false;
     private boolean withStderr = false;
     private boolean dryRun = false;
-    private boolean withCache = true;
 
     private String databaseName = null;
     private String userName = null;
@@ -49,29 +55,85 @@ public class HPLSQLExecutor implements PLSQLExecutor {
             this.withStderr = srvInterface.getParamReader().getBoolean(PLSQLExecutor.WITHSTDERR);
         if (srvInterface.getParamReader().containsParameter(PLSQLExecutor.DRYRUN))
             this.dryRun = srvInterface.getParamReader().getBoolean(PLSQLExecutor.DRYRUN);
-        if (srvInterface.getParamReader().containsParameter(PLSQLExecutor.WITHCACHE))
-            this.withCache = srvInterface.getParamReader().getBoolean(PLSQLExecutor.WITHCACHE);
 
         this.databaseName = srvInterface.getDatabaseName();
         this.userName = srvInterface.getUserName();
+    }
 
-        // read content from DSF.
+    public void initCache(ServerInterface srvInterface) {
+        PLSQLCache.init(srvInterface);
         try {
             if (!PLSQLCache.isValidate()) {
-                Map<String, ParseTree> storedPLSQLTrees = null;
-                Map<String, String> filesContent = DFSOperations.readFiles(srvInterface, null);
+                Map<String, Throwable> parsingExceptions = new ConcurrentHashMap<String, Throwable>();
+                // read stored PL/SQL objects from DSF.
+                Map<String, Object[]> filesContent = DFSOperations.readFiles(srvInterface, null);
                 if (filesContent != null) {
-                    for (Map.Entry<String, String> cnt : filesContent.entrySet()) {
-                        ParseTree tree = new HplsqlParser(new CommonTokenStream(new HplsqlLexer(
-                                new ANTLRInputStream(new ByteArrayInputStream(cnt.getValue().getBytes("UTF-8"))))))
-                                        .program();
-                        if (storedPLSQLTrees == null)
-                            storedPLSQLTrees = new ConcurrentHashMap<String, ParseTree>();
-                        storedPLSQLTrees.put(cnt.getKey(), tree);
+                    // maybe need deserialization, with mulitple thread for better performance
+                    ExecutorService exServer = Executors.newFixedThreadPool(CONCURRENCY);
+                    for (Map.Entry<String, Object[]> cnt : filesContent.entrySet()) {
+                        String codePLSQL = (String) cnt.getValue()[0];
+                        Object value = cnt.getValue()[1];
+                        if (codePLSQL != null && codePLSQL.length() > 0) {
+                            if (value != null && value instanceof byte[]) {
+                                byte[] baObject = (byte[]) value;
+                                exServer.execute(new Runnable() {
+                                    public void run() {
+                                        try {
+                                            ByteArrayInputStream baiosObject = new ByteArrayInputStream(baObject);
+                                            ObjectInputStream ois = new ObjectInputStream(
+                                                    new GZIPInputStream(baiosObject));
+                                            cnt.getValue()[1] = ois.readObject();
+                                            ois.close();
+                                        } catch (Throwable e) {
+                                            // failed on deserialization, reparse later.
+                                            cnt.getValue()[1] = null;
+                                        }
+                                    }
+                                });
+                            }
+                        }
                     }
+                    exServer.shutdown();
+                    exServer.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+
+                    // maybe need parsing, with mulitple thread for better performance
+                    exServer = Executors.newFixedThreadPool(CONCURRENCY);
+                    for (Map.Entry<String, Object[]> cnt : filesContent.entrySet()) {
+                        String codePLSQL = (String) cnt.getValue()[0];
+                        Object value = cnt.getValue()[1];
+                        if (codePLSQL != null && codePLSQL.length() > 0) {
+                            if (value == null) {
+                                // reparse when parsing tree library upgraded.
+                                exServer.execute(new Runnable() {
+                                    public void run() {
+                                        try {
+                                            ParseTree tree = (ParseTree) new HplsqlParser(
+                                                    new CommonTokenStream(new HplsqlLexer(new ANTLRInputStream(
+                                                            new ByteArrayInputStream(codePLSQL.getBytes("UTF-8"))))))
+                                                                    .program();
+                                            cnt.getValue()[1] = tree;
+                                            DFSOperations.writeFile(srvInterface, cnt.getKey(), codePLSQL, tree);
+                                        } catch (Throwable e) {
+                                            parsingExceptions.put(cnt.getKey(), e);
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    }
+                    exServer.shutdown();
+                    exServer.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
                 }
 
-                PLSQLCache.setData(storedPLSQLTrees, this.withCache);
+                if (parsingExceptions.size() == 0) {
+                    PLSQLCache.setData(filesContent);
+                } else {
+                    StringBuffer sb = new StringBuffer();
+                    for (Map.Entry<String, Throwable> ent : parsingExceptions.entrySet()) {
+                        sb.append("\r\n    Parsing [").append(ent.getKey()).append("]").append(" failed. Reason: ")
+                                .append(ent.getValue().getMessage());
+                    }
+                }
             }
         } catch (Throwable e) {
             throw new UdfException(0, String.format("ERROR: failed read stored objects caused by %s", e.getMessage()));
@@ -96,20 +158,19 @@ public class HPLSQLExecutor implements PLSQLExecutor {
                 @Override
                 public Integer visitCreate_procedure_stmt(HplsqlParser.Create_procedure_stmtContext ctx) {
                     // Save procedure
-                    DFSOperations.writeFile(srvInterface, ctx.ident(0).getText(), this.getFormattedText(ctx));
+                    DFSOperations.writeFile(srvInterface, ctx.ident(0).getText(), this.getFormattedText(ctx), ctx);
                     return super.visitCreate_procedure_stmt(ctx);
                 }
 
                 @Override
                 public Integer visitCreate_function_stmt(HplsqlParser.Create_function_stmtContext ctx) {
                     // Save procedure
-                    DFSOperations.writeFile(srvInterface, ctx.ident().getText(), this.getFormattedText(ctx));
+                    DFSOperations.writeFile(srvInterface, ctx.ident().getText(), this.getFormattedText(ctx), ctx);
                     return super.visitCreate_function_stmt(ctx);
                 }
             };
             String[] args = { "-e", codePLSQL, "--trace", "--offline" };
             exec.run(args);
-            DFSOperations.updateLastModified(srvInterface);
 
             return getHPLSQLOutput(out.toString()).trim();
         } catch (Throwable e) {
@@ -161,11 +222,10 @@ public class HPLSQLExecutor implements PLSQLExecutor {
                     super.includeRcFile();
                     // include stored PLSQLs
                     try {
-                        Map<String, ParseTree> storedPLSQLTrees = (Map<String, ParseTree>) PLSQLCache.getData();
+                        Map<String, Object[]> storedPLSQLTrees = PLSQLCache.getData();
                         if (storedPLSQLTrees != null) {
-                            // TODO: parsing with mulitple thread for better performance
-                            for (Map.Entry<String, ParseTree> tree : storedPLSQLTrees.entrySet()) {
-                                super.visit(tree.getValue());
+                            for (Map.Entry<String, Object[]> tree : storedPLSQLTrees.entrySet()) {
+                                super.visit((ParseTree) tree.getValue()[1]);
                             }
                         }
                     } catch (Exception e) {

@@ -17,7 +17,7 @@ public class PLSQL_ExportFactory extends ScalarFunctionFactory {
     public static final String NAME = "name";
 
     public class PLSQL_Export extends ScalarFunction {
-        private Map<String, String> filesContent = null;
+        private Map<String, Object[]> filesContent = null;
 
         @Override
         public void setup(ServerInterface srvInterface, SizedColumnTypes argTypes) {
@@ -47,7 +47,7 @@ public class PLSQL_ExportFactory extends ScalarFunctionFactory {
                         if (result.length() > 0) {
                             result.append("\r\n\r\n");
                         }
-                        result.append(this.filesContent.get(key));
+                        result.append(this.filesContent.get(key)[0]);
                     }
                     resWriter.setString(result.toString());
                 } else {

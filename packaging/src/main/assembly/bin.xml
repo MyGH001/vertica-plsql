@@ -95,12 +95,13 @@
     </fileSet>
 
     <fileSet>
-      <directory>${project.parent.basedir}/vplsql/src/test/queries</directory>
+      <directory>${project.parent.basedir}/vplsql/src/test</directory>
       <includes>
         <include>**/*</include>
       </includes>
       <excludes>
         <exclude>ivysettings.xml</exclude>
+        <exclude>genResult.sh</exclude>
       </excludes>
       <outputDirectory>test/invertica</outputDirectory>
     </fileSet>

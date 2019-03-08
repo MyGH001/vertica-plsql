@@ -3,7 +3,7 @@
 showUsage ()
 {
 cat <<-EOF >&2
-Test suite for Vertica PL/SQL
+Generate result of test cases for PL/SQL in Vertica
 Usage: $(basename ${0}) [options] [caseName1] [caseName2] [...]
        empty parameter means test all cases.
 Options:
@@ -39,17 +39,11 @@ VSQL="$(sed '
     s/ *-H */ /g
     s/ *-T *.*/ /g
     s/ *-x */ /g
+    s/ *-Q */ /g
     s/ *-F *.*/ /g
     s/ *-R *.*/ /g
     s/ *-i */ /g
   ' <<< "${VSQL}")"
-VSQL="${VSQL/ -e/}"
-VSQL="${VSQL/ -a/}"
-VSQL="${VSQL/ -E/}"
-VSQL="${VSQL/ -s/}"
-VSQL="${VSQL/ -S/}"
-VSQL="${VSQL/ -x/}"
-VSQL="${VSQL/ -i/}"
 
 curDir=$(pwd)
 scriptDir=$(cd "$(dirname $0)"; pwd)
@@ -60,37 +54,43 @@ runCase ()
   caseName="${1}"
   sqlFile="${2}"
   outputFile="${3}"
-  echo -n "    testing case [ ${caseName} ] ... "
-  result="$( diff "${outputFile}" <(${VSQL} -AQt -f "${sqlFile}") )"
+  echo -n "    generating result for case [${caseName}] ... "
+  
+  result="$( ${VSQL} -XAqt -f "${sqlFile}" -o "${outputFile}" 2>&1 1>/dev/null )"
   if [ $? -eq 0 ] ; then
-    echo "passed."
+    echo "successful."
+  elif [ -z "${result}" ] ; then
+    echo "failed!"
+    return 1
   else
-    echo "failed! The difference between expectation and result:"
+    echo "failed! Error message:"
     sed -e ':a' -e 'N' -e '$!ba' -e "s/\n/\\$(echo -e '\n\r        ')/g" <<< "        ${result}"
     return 1
   fi
 }
 
-echo "Begin testing ..."
+echo "Begin generating ..."
 passed=0
 failed=0
 if [ $# -gt 0 ] ; then
   for caseName in "$@" ; do
     sqlFile="${scriptDir}/test${caseName}.sql"
-    outputFile="${scriptDir}/../results/test${caseName}.out"
-    if [ "${caseName}" != "-" -a "${caseName}" != "--" ] ; then
+    outputFile="${scriptDir}/test${caseName}.out"
+    if [ "${caseName}" != "-" -a "${caseName}" != "--" -a -f "${sqlFile}" ] ; then
       runCase "${caseName}" "${sqlFile}" "${outputFile}"
       if [ $? -eq 0 ] ; then
         passed=$((passed+1))
       else
         failed=$((failed+1))
       fi
+    else
+      echo -n "    case [${caseName}] ... invalid!"
     fi
   done
 else
   for sqlFile in "${scriptDir}"/test?*.sql ; do
-    caseName="$(sed 's/^test//g' <<< "testFunctionCall.sql" | sed 's/\.sql$//g')"
-    outputFile="${scriptDir}/../results/test${caseName}.out"
+    caseName="$(sed -e 's/^test//g' -e 's/\.sql$//g' <<< "$(basename ${sqlFile})")"
+    outputFile="${scriptDir}/test${caseName}.out"
     runCase "${caseName}" "${sqlFile}" "${outputFile}"
     if [ $? -eq 0 ] ; then
       passed=$((passed+1))
@@ -101,9 +101,9 @@ else
 fi
 
 echo ""
-echo -n "Summary: tested $((passed+failed)) cases totally, "
+echo -n "Summary: generated $((passed+failed)) cases totally, "
 if [ $failed -eq 0 ] ; then
-  echo "all cases passed."
+  echo "all cases successful."
 else
   echo "${failed} cases failed!"
 fi

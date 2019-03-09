@@ -71,6 +71,9 @@
       <includes>
         <include>**/*</include>
       </includes>
+      <excludes>
+        <exclude>test/standalone/genResult.sh</exclude>
+      </excludes>
       <outputDirectory></outputDirectory>
     </fileSet>
 

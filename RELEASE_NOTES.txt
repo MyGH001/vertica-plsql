@@ -1,3 +1,11 @@
+2019-03-09 Release Notes - Version 0.0.3
+
+** Sub-task
+    * improve scalability, additional overhead of 1000+ procedures in Vertica is under 10 seconds on physical machine.
+    * new test framework, testSuite.sh and genResult.sh, to generate test out file of queries and run test cases.
+    * resolved issue #1 "INSERT INTO TABLE ERROR". Thanks for bug report from @HongJunDW.
+
+    
 2019-02-22 Release Notes - Version 0.0.2
 
 ** Sub-task

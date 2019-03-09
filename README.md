@@ -213,6 +213,21 @@ mvn -DskipTests=true clean install
     </configuration>
     ```
 
+    optional step for test
+
+    ``` BASH
+    $ export HPLSQL_HOME="$(pwd)"
+    $ test/standalone/testSuite.sh
+    Begin testing ...
+        testing case [Copy] ... passed.
+        testing case [Datatype] ... passed.
+        testing case [FunctionCall] ... passed.
+        testing case [InsertInto] ... passed.
+        testing case [Output] ... passed.
+  
+    Summary: tested 5 cases totally, all cases passed.
+    ```
+
 3. run PL/SQL code in CLI
 
     ``` BASH
@@ -262,6 +277,16 @@ mvn -DskipTests=true clean install
     $
     $ $VSQL -f ddl/uninstall.sql # optional step for upgrade
     $ $VSQL -f ddl/install.sql
+    $
+    $ test/invertica/testSuite.sh # optional step for test
+    Begin testing ...
+        testing case [Copy] ... passed.
+        testing case [Datatype] ... passed.
+        testing case [FunctionCall] ... passed.
+        testing case [InsertInto] ... passed.
+        testing case [Output] ... passed.
+  
+    Summary: tested 5 cases totally, all cases passed.
     ```
 
 2. run Vertica PL/SQL UDFs to manage and run PL/SQL code through any client of Vertica

@@ -24,7 +24,7 @@
     -->
     <groupId>com.vertica</groupId>
     <artifactId>vertica-plsql</artifactId>
-    <version>0.0.2</version>
+    <version>0.0.3</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 

@@ -20,6 +20,18 @@ public class Exec4Vertica extends Exec {
 
     @Override
     public void initOptions() {
+        // hack Conn to mock vertica connection as MySQL for using native SQL except
+        // Hive SQL
+        super.conn = new Conn(this) {
+            Conn.Type getType(String connStr) {
+                if (connStr.contains("com.vertica.jdbc.")) {
+                    return Conn.Type.MYSQL;
+                } else {
+                    return super.getType(connStr);
+                }
+            }
+        };
+
         super.initOptions();
     }
 

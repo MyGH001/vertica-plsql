@@ -21,4 +21,4 @@ root=$(dirname "${bin}")
 
 cp="${root}/conf":$(echo ${root}/lib/*.jar | tr ' ' ':')
 
-java -cp "$cp" org.apache.hive.hplsql.Hplsql "$@"
+java -cp "$cp" org.apache.hive.hplsql.Hplsql4Vertica "$@"

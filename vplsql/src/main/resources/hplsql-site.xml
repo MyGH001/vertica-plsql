@@ -11,6 +11,12 @@
   <description>Vertica connection</description>
 </property>
 -->
+<!-- Note: Here just for easier debuging in standalone mode, HPLSQLExecutor will overwrite verticaconn in Vertica mode. -->
+<property>
+  <name>hplsql.conn.verticaconn</name>
+  <value>com.vertica.jdbc.Driver;jdbc:vertica://v001:5433/test;dbadmin;</value>
+  <description>Vertica connection</description>
+</property>
 <property>
   <name>hplsql.conn.convert.verticaconn</name>
   <value>true</value>

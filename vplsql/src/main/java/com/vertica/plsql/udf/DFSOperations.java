@@ -13,6 +13,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
 
@@ -61,6 +62,8 @@ public class DFSOperations {
             objWriter.close();
 
             PLSQLCache.put(objName, codePLSQL, tree);
+        } catch (NotSerializableException e) {
+            throw new RuntimeException("PL/SQL syntax error", e);
         } catch (Throwable e) {
             throw new RuntimeException(
                     String.format("ERROR: failed writing PL/SQL to database, caused by %s", e.getMessage()));

@@ -7,6 +7,8 @@ package com.vertica.plsql.udf;
 import java.io.ByteArrayInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.NotSerializableException;
 import java.io.ObjectInputStream;
 import java.io.PrintStream;
 import java.io.StringReader;
@@ -130,7 +132,7 @@ public class HPLSQLExecutor implements PLSQLExecutor {
                 } else {
                     StringBuffer sb = new StringBuffer();
                     for (Map.Entry<String, Throwable> ent : parsingExceptions.entrySet()) {
-                        sb.append("\r\n    Parsing [").append(ent.getKey()).append("]").append(" failed. Reason: ")
+                        sb.append("\n    Parsing [").append(ent.getKey()).append("]").append(" failed. Reason: ")
                                 .append(ent.getValue().getMessage());
                     }
                 }
@@ -143,14 +145,18 @@ public class HPLSQLExecutor implements PLSQLExecutor {
     public String create(ServerInterface srvInterface, String codePLSQL) {
         PrintStream stdout = null;
         PrintStream stderr = null;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = null;
         try {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
             PrintStream psOut = new PrintStream(out);
             stdout = System.out;
             System.setOut(psOut);
+            stderr = System.err;
             if (this.withStderr) {
-                stderr = System.err;
                 System.setErr(psOut);
+            } else {
+                err = new ByteArrayOutputStream();
+                System.setErr(new PrintStream(err));
             }
 
             // parsing PLSQL code
@@ -174,7 +180,15 @@ public class HPLSQLExecutor implements PLSQLExecutor {
 
             return getHPLSQLOutput(out.toString()).trim();
         } catch (Throwable e) {
-            throw new UdfException(0, String.format("ERROR: failed add PL/SQL caused by %s", e.getMessage()));
+            if (e.getCause() instanceof NotSerializableException) {
+                return String.format("PL/SQL syntax error! Details:\n%s%s", getHPLSQLOutput(out.toString()).trim(),
+                        (err != null) ? getHPLSQLOutput(err.toString()).trim() : "");
+            } else {
+                throw new UdfException(0,
+                        String.format("ERROR: failed add PL/SQL caused by %s.\nDetails:\n%s%s", e.getMessage(),
+                                getHPLSQLOutput(out.toString()).trim(),
+                                (err != null) ? getHPLSQLOutput(err.toString()).trim() : ""));
+            }
         } finally {
             if (stdout != null)
                 System.setOut(stdout);
@@ -186,14 +200,18 @@ public class HPLSQLExecutor implements PLSQLExecutor {
     public String run(String codePLSQL) {
         PrintStream stdout = null;
         PrintStream stderr = null;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = null;
         try {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
             PrintStream psOut = new PrintStream(out);
             stdout = System.out;
             System.setOut(psOut);
+            stderr = System.err;
             if (this.withStderr) {
-                stderr = System.err;
                 System.setErr(psOut);
+            } else {
+                err = new ByteArrayOutputStream();
+                System.setErr(new PrintStream(err));
             }
 
             // execute PLSQL code
@@ -240,11 +258,11 @@ public class HPLSQLExecutor implements PLSQLExecutor {
                     if (e instanceof SQLInvalidAuthorizationSpecException
                             || e instanceof InvalidAuthorizationException) {
                         super.criticalExceptionMsg = String.format(
-                                String.join("\r\n", "User [%s] login failed from PL/SQL to Vertia.",
+                                String.join("\n", "User [%s] login failed from PL/SQL to Vertia.",
                                         "Please check whether you've gaven it privilege as followings:",
                                         "    create authentication v_plsql method 'trust' local;",
                                         "    alter authentication v_plsql priority 9999;",
-                                        "    grant authentication v_plsql to %s;", "Caused by:\r\n %s"),
+                                        "    grant authentication v_plsql to %s;", "Caused by:\n %s"),
                                 userName, userName, e.getMessage());
                     }
 
@@ -266,7 +284,9 @@ public class HPLSQLExecutor implements PLSQLExecutor {
             return getHPLSQLOutput(out.toString()).trim();
         } catch (Throwable e) {
             throw new UdfException(0,
-                    String.format("ERROR: failed to execute PL/SQL code! Caused by:\r\n %s", e.getMessage()));
+                    String.format("ERROR: failed to execute PL/SQL code! Caused by:\n %s.\nDetails:\n%s%s",
+                            e.getMessage(), getHPLSQLOutput(out.toString()).trim(),
+                            (err != null) ? getHPLSQLOutput(err.toString()).trim() : ""));
         } finally {
             if (stdout != null)
                 System.setOut(stdout);
@@ -278,15 +298,19 @@ public class HPLSQLExecutor implements PLSQLExecutor {
     /**
      * Get HPLSQL output
      */
-    private static String getHPLSQLOutput(String s) throws Exception {
+    private static String getHPLSQLOutput(String s) {
         StringBuilder sb = new StringBuilder();
         BufferedReader reader = new BufferedReader(new StringReader(s));
         String line = null;
-        while ((line = reader.readLine()) != null) {
-            if (!line.startsWith("log4j:") && !line.contains("INFO Log4j")) {
-                sb.append(line);
-                sb.append("\n");
+        try {
+            while ((line = reader.readLine()) != null) {
+                if (!line.startsWith("log4j:") && !line.contains("INFO Log4j")
+                        && !line.startsWith("Configuration file:")) {
+                    sb.append(line);
+                    sb.append("\n");
+                }
             }
+        } catch (IOException e) {
         }
         return sb.toString();
     }

@@ -1,0 +1,4 @@
+PL/SQL syntax error! Details:
+line 3:0 mismatched input 'end' expecting <EOF>
+Parser tree: (program (block (stmt (create_procedure_stmt create or replace procedure (ident p_test_syntax_error) (create_routine_params ( )) (proc_block (stmt (expr_stmt (expr (expr_atom (ident (non_reserved_words as)))))))))) end ;)
+line 3:0 mismatched input 'end' expecting <EOF>

@@ -2151,7 +2151,15 @@ public class Exec extends HplsqlBaseVisitor<Integer> {
         }
       }
       else {
-        exec.stackPush(new Var(ident, Var.Type.STRING, var.toSqlString()));
+        if ((var.type == Var.Type.DATE) || (var.type == Var.Type.TIMESTAMP)) {
+          Var datetimeLite = new Var(ident, Var.Type.STRING, var.toSqlString());
+          if (var.value != null) {
+            datetimeLite.setValue(((var.type == Var.Type.DATE) ? "DATE " : "TIMESTAMP ") + datetimeLite.toSqlString());
+          }
+          exec.stackPush(datetimeLite);
+        } else {
+          exec.stackPush(new Var(ident, Var.Type.STRING, var.toSqlString()));
+        }
       }
     }
     else {

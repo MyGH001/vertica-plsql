@@ -1,17 +1,9 @@
 Ln:1 CREATE PROCEDURE p_test_datatype
 sigma from 1 to 10 = 55
-Set variable:
-    int = 1550636626
-    float = 1.550636625678E9
-    numeric = 1550636625.678
-    varchar = 1550636625.678
-    date = 2019-02-20
-    datetime = 2019-02-20 12:23:45.678
-SELECT INTO:
-    int = 1550636626
-    float = 1.550636625678E9
-    numeric = 1550636625.678000
-    varchar = 2019-02-20 12:23:45.678
-    date = 2019-02-20
-    datetime = 2019-02-20 12:23:45.678
+int = 20190220122345
+float = 2.019022012234568E13
+numeric = 20190220122345.678
+varchar = 2019-02-20 12:23:45.678
+date = 2019-02-20
+datetime = 2019-02-20 12:23:45.678
 t

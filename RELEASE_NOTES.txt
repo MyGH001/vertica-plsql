@@ -1,3 +1,10 @@
+2019-03-14 Release Notes - Version 0.1.0
+
+** Sub-task
+    * Resolved the issue that HPL/SQL can not select Date and Timestamp type values into variables
+    * Resolved the issue that HPL/SQL incorrectly generate literal when referring Date or Timestamp type variable in SELECT and other SQL statements, eg. it should be DATE '2019-02-20', not 2019-02-20 .
+
+
 2019-03-09 Release Notes - Version 0.0.3
 
 ** Sub-task

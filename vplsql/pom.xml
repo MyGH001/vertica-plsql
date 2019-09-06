@@ -66,6 +66,13 @@
       <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <version>${hadoop.version}</version>
+      <scope>rumtime</scope>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
 </project>

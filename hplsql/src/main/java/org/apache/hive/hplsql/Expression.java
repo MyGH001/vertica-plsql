@@ -18,6 +18,7 @@
 
 package org.apache.hive.hplsql;
 
+import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.Calendar;
@@ -356,6 +357,30 @@ public class Expression {
     else if (v1.type == Type.TIMESTAMP && v2.type == Type.INTERVAL) {
       exec.stackPush(new Var(((Interval)v2.value).timestampChange((Timestamp)v1.value, true /*add*/), v1.scale));
     }
+    else if (v1.type == Type.DOUBLE && v2.type == Type.DOUBLE) {
+      exec.stackPush(new Var((Double)v1.value + (Double)v2.value)); 
+    }
+    else if (v1.type == Type.DOUBLE && v2.type == Type.BIGINT) {
+      exec.stackPush(new Var((Double)v1.value + (Long)v2.value)); 
+    }
+    else if (v2.type == Type.DOUBLE && v1.type == Type.BIGINT) {
+      exec.stackPush(new Var((Double)v2.value + (Long)v1.value)); 
+    }
+    else if (v1.type == Type.DECIMAL && v2.type == Type.DECIMAL) {
+      exec.stackPush(new Var(((BigDecimal)v1.value).add((BigDecimal)v2.value))); 
+    }
+    else if (v1.type == Type.DECIMAL && v2.type == Type.DOUBLE) {
+      exec.stackPush(new Var(((BigDecimal)v1.value).add(BigDecimal.valueOf((Double)v2.value)))); 
+    }
+    else if (v2.type == Type.DECIMAL && v1.type == Type.DOUBLE) {
+      exec.stackPush(new Var(((BigDecimal)v2.value).add(BigDecimal.valueOf((Double)v1.value)))); 
+    }
+    else if (v1.type == Type.DECIMAL && v2.type == Type.BIGINT) {
+      exec.stackPush(new Var(((BigDecimal)v1.value).add(BigDecimal.valueOf((Long)v2.value)))); 
+    }
+    else if (v2.type == Type.DECIMAL && v1.type == Type.BIGINT) {
+      exec.stackPush(new Var(((BigDecimal)v2.value).add(BigDecimal.valueOf((Long)v1.value)))); 
+    }
     else {
       evalNull();
     }
@@ -382,6 +407,30 @@ public class Expression {
     else if (v1.type == Type.TIMESTAMP && v2.type == Type.INTERVAL) {
       exec.stackPush(new Var(((Interval)v2.value).timestampChange((Timestamp)v1.value, false /*subtract*/), v1.scale));
     }
+    else if (v1.type == Type.DOUBLE && v2.type == Type.DOUBLE) {
+      exec.stackPush(new Var((Double)v1.value - (Double)v2.value)); 
+    }
+    else if (v1.type == Type.DOUBLE && v2.type == Type.BIGINT) {
+      exec.stackPush(new Var((Double)v1.value - (Long)v2.value)); 
+    }
+    else if (v2.type == Type.DOUBLE && v1.type == Type.BIGINT) {
+      exec.stackPush(new Var(Double.valueOf((Long)v1.value) - (Double)v2.value)); 
+    }
+    else if (v1.type == Type.DECIMAL && v2.type == Type.DECIMAL) {
+      exec.stackPush(new Var(((BigDecimal)v1.value).subtract((BigDecimal)v2.value))); 
+    }
+    else if (v1.type == Type.DECIMAL && v2.type == Type.DOUBLE) {
+      exec.stackPush(new Var(((BigDecimal)v1.value).subtract(BigDecimal.valueOf((Double)v2.value)))); 
+    }
+    else if (v2.type == Type.DECIMAL && v1.type == Type.DOUBLE) {
+      exec.stackPush(new Var(BigDecimal.valueOf((Double)v1.value).subtract((BigDecimal)v2.value))); 
+    }
+    else if (v1.type == Type.DECIMAL && v2.type == Type.BIGINT) {
+      exec.stackPush(new Var(((BigDecimal)v1.value).subtract(BigDecimal.valueOf((Long)v2.value)))); 
+    }
+    else if (v2.type == Type.DECIMAL && v1.type == Type.BIGINT) {
+      exec.stackPush(new Var(BigDecimal.valueOf((Long)v1.value).subtract((BigDecimal)v2.value))); 
+    }
     else {
       evalNull();
     }
@@ -399,6 +448,30 @@ public class Expression {
     else if (v1.type == Type.BIGINT && v2.type == Type.BIGINT) {
       exec.stackPush(new Var((Long)v1.value * (Long)v2.value)); 
     }
+    else if (v1.type == Type.DOUBLE && v2.type == Type.DOUBLE) {
+      exec.stackPush(new Var((Double)v1.value * (Double)v2.value)); 
+    }
+    else if (v1.type == Type.DOUBLE && v2.type == Type.BIGINT) {
+      exec.stackPush(new Var((Double)v1.value * (Long)v2.value)); 
+    }
+    else if (v2.type == Type.DOUBLE && v1.type == Type.BIGINT) {
+      exec.stackPush(new Var(Double.valueOf((Long)v1.value) * (Double)v2.value)); 
+    }
+    else if (v1.type == Type.DECIMAL && v2.type == Type.DECIMAL) {
+      exec.stackPush(new Var(((BigDecimal)v1.value).multiply((BigDecimal)v2.value))); 
+    }
+    else if (v1.type == Type.DECIMAL && v2.type == Type.DOUBLE) {
+      exec.stackPush(new Var(((BigDecimal)v1.value).multiply(BigDecimal.valueOf((Double)v2.value)))); 
+    }
+    else if (v2.type == Type.DECIMAL && v1.type == Type.DOUBLE) {
+      exec.stackPush(new Var(BigDecimal.valueOf((Double)v1.value).multiply((BigDecimal)v2.value))); 
+    }
+    else if (v1.type == Type.DECIMAL && v2.type == Type.BIGINT) {
+      exec.stackPush(new Var(((BigDecimal)v1.value).multiply(BigDecimal.valueOf((Long)v2.value)))); 
+    }
+    else if (v2.type == Type.DECIMAL && v1.type == Type.BIGINT) {
+      exec.stackPush(new Var(BigDecimal.valueOf((Long)v1.value).multiply((BigDecimal)v2.value))); 
+    }
     else {
       exec.signal(Signal.Type.UNSUPPORTED_OPERATION, "Unsupported data types in multiplication operator");
     }
@@ -415,6 +488,31 @@ public class Expression {
     }
     else if (v1.type == Type.BIGINT && v2.type == Type.BIGINT) {
       exec.stackPush(new Var((Long)v1.value / (Long)v2.value)); 
+    }
+    else if (v1.type == Type.DOUBLE && v2.type == Type.DOUBLE) {
+      exec.stackPush(new Var((Double)v1.value / (Double)v2.value)); 
+    }
+    else if (v1.type == Type.DOUBLE && v2.type == Type.BIGINT) {
+      exec.stackPush(new Var((Double)v1.value / (Long)v2.value)); 
+    }
+    else if (v2.type == Type.DOUBLE && v1.type == Type.BIGINT) {
+      exec.stackPush(new Var(Double.valueOf((Long)v1.value) / (Double)v2.value)); 
+    }
+    else if (v1.type == Type.DECIMAL && v2.type == Type.DECIMAL) {
+      exec.stackPush(new Var(((BigDecimal)v1.value).divide((BigDecimal)v2.value))); 
+    }
+    else if (v1.type == Type.DECIMAL && v2.type == Type.DOUBLE) {
+      exec.stackPush(new Var(((BigDecimal)v1.value).divide(BigDecimal.valueOf((Double)v2.value)))); 
+    }
+    else if (v2.type == Type.DECIMAL && v1.type == Type.DOUBLE) {
+      exec.stackPush(new Var(BigDecimal.valueOf((Double)v1.value).divide((BigDecimal)v2.value))); 
+    }
+    else if (v1.type == Type.DECIMAL && v2.type == Type.BIGINT) {
+      exec.stackPush(new Var(((BigDecimal)v1.value).divide(BigDecimal.valueOf((Long)v2.value)))); 
+    }
+    else if (v2.type == Type.DECIMAL && v1.type == Type.BIGINT) {
+      exec.stackPush(new Var(BigDecimal.valueOf((Long) v1.value).divide((BigDecimal) v2.value,
+          ((BigDecimal) v2.value).scale(), BigDecimal.ROUND_HALF_UP)));
     }
     else {
       exec.signal(Signal.Type.UNSUPPORTED_OPERATION, "Unsupported data types in division operator");

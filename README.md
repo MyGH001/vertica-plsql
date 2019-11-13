@@ -160,17 +160,17 @@ Vertica PL/SQL keeps compatible with **HPLSQL** of apache/hive, which is compati
 - [Optional] Vertica JDBC Driver in maven repository for build from source code.
 
   ``` BASH
-  $ wget -o /tmp/vertica-jdbc-9.2.0-0.jar https://www.vertica.com/client_drivers/9.2.x/9.2.0-0/vertica-jdbc-9.2.0-0.jar
+  $ wget -o /tmp/vertica-jdbc-9.3.0-0.jar https://www.vertica.com/client_drivers/9.3.x/9.3.0-0/vertica-jdbc-9.3.0-0.jar
   $
-  $ mvn install:install-file -DgroupId=com.vertica -DartifactId=vertica-jdbc -Dversion=9.2.0-0 -Dpackaging=jar -DgeneratePom=true -Dfile=/tmp/vertica-jdbc-9.2.0-0.jar
+  $ mvn install:install-file -DgroupId=com.vertica -DartifactId=vertica-jdbc -Dversion=9.3.0-0 -Dpackaging=jar -DgeneratePom=true -Dfile=/tmp/vertica-jdbc-9.3.0-0.jar
   
-  $ rm /tmp/vertica-jdbc-9.2.0-0.jar
+  $ rm /tmp/vertica-jdbc-9.3.0-0.jar
   ```
 
 - [Optional] Vertica SDK in maven repository for build from source.
 
   ``` BASH
-  $ mvn install:install-file -DgroupId=com.vertica -DartifactId=vertica-sdk -Dversion=9.2.0-0 -Dpackaging=jar -DgeneratePom=true -Dfile=/opt/vertica/bin/VerticaSDK.jar
+  $ mvn install:install-file -DgroupId=com.vertica -DartifactId=vertica-sdk -Dversion=9.3.0-0 -Dpackaging=jar -DgeneratePom=true -Dfile=/opt/vertica/bin/VerticaSDK.jar
   $
   ```
 

@@ -103,11 +103,6 @@
       <version>${hadoop.version}</version>
       <exclusions>
         <exclusion>
-          <!-- TODO: seem not work for Excluding All Transitive Dependencies -->
-          <groupId>*</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-annotations</artifactId>
         </exclusion>

@@ -8,7 +8,38 @@ Vertica PL/SQL can run in two deploy modes:
 
   This is the recommended mode, as it only need one connection to Vertica for running PL/SQL code.
 
+  ```text
+  +----------------------+
+  |   ETL/Applications   |           +------------+
+  | +------------------+ |  JDBC     |  Vertica   |
+  | | PL/SQL sandbox   |-+---------->|   Server   |
+  | +------------------+ |           |            |
+  | |  def scripts     | |           +------------+
+  | |   for PROCs      | |
+  | +------------------+ |
+  | |       JAVA       | |
+  | +------------------+ |
+  +----------------------+
+  ```
+
 - **In Vertica mode**. This mode is supported by **vplsql** component, which contains some Vertica UDFs to manage PL/SQL procedures/functions, and run them on Vertical database.
+
+  ```text
+  +---------+         +-------------------------------------------------------------+
+  +   Apps  +         |                       Vertica Server                        |
+  +---------+         |  +---------------+               JDBC w/trust local auth    |
+  | Vertica |---------+->|   Sessions    |<---------------------------------------+ |
+  | Clients |         |  +---------------+                                        | |
+  +---------+         |  |  Parser/Opt   |                                        | |
+                      |  +---------------+  call     +------------------+         | |
+                      |  |    EE         |---------->|    PL/SQL UDx    |         | |
+                      |  +---------------+           +------------------+  query  | |
+                      |  | SAL(ROS, DFS) |<----------|    sandbox       |---------+ |
+                      |  +---------------+ meta/DFS  +------------------+           |
+                      |                              |       JAVA       |           |
+                      |                              +------------------+           |
+                      +-------------------------------------------------------------+
+  ```
 
 ## PL/SQL Reference
 
